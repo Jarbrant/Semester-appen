@@ -4,7 +4,8 @@
    - Starta appen
    - Initiera storage
    - Ladda grunddata
-   - Hantera auth (fallback/demo)
+   - Hantera auth
+   - Synka UI
 ========================================== */
 
 /* ==========================================
@@ -14,35 +15,60 @@ window.addEventListener("DOMContentLoaded", () => {
     console.log("🚀 Startar app...");
 
     try {
-        // 🔹 säkerställ att storage är redo
+        setLoading(true); // ⏳ visa loading
+
+        /* ------------------------------------------
+           🔧 INIT STORAGE
+        ------------------------------------------ */
         if (typeof initStorage === "function") {
             initStorage();
         }
 
-        // 🔹 skapa demo-data om tomt (nice)
+        /* ------------------------------------------
+           🌱 DEMO DATA
+        ------------------------------------------ */
         if (typeof seedEmployees === "function") {
             seedEmployees();
         }
 
-        // 🔹 ladda UI-data
+        /* ------------------------------------------
+           👥 LOAD UI DATA
+        ------------------------------------------ */
         if (typeof loadEmployees === "function") {
             loadEmployees();
         }
 
-        // 🔹 säkerställ att user finns
-        ensureUser();
+        /* ------------------------------------------
+           🔐 AUTH
+        ------------------------------------------ */
+        const user = ensureUser();
 
-        // 🔹 render UI
-        renderCalendar();
+        /* ------------------------------------------
+           👤 UPDATE UI (user)
+        ------------------------------------------ */
+        if (user && typeof setText === "function") {
+            setText("currentUser", `👤 ${user.name}`);
+        }
+
+        /* ------------------------------------------
+           📅 RENDER
+        ------------------------------------------ */
+        if (typeof renderCalendar === "function") {
+            renderCalendar();
+        }
 
         console.log("✅ App startad korrekt");
+
     } catch (err) {
         console.error("❌ Fel vid app-start:", err);
+        showToast?.("Fel vid start av app", "error");
+    } finally {
+        setLoading(false); // ⏳ ta bort loading
     }
 });
 
 /* ==========================================
-   👤 AUTH HANDLING (nice to have)
+   👤 AUTH HANDLING
 ========================================== */
 function ensureUser() {
     if (typeof getCurrentUser !== "function") return null;
@@ -50,7 +76,7 @@ function ensureUser() {
     let user = getCurrentUser();
 
     if (!user) {
-        console.warn("⚠️ Ingen användare hittades → startar demo user");
+        console.warn("⚠️ Ingen användare → skapar demo");
 
         if (typeof login === "function") {
             login("Admin", "admin");
@@ -64,37 +90,62 @@ function ensureUser() {
 }
 
 /* ==========================================
-   🔄 GLOBAL REFRESH (nice to have)
+   🔄 GLOBAL REFRESH
    - Uppdaterar hela UI
 ========================================== */
 function refreshApp() {
-    if (typeof renderCalendar === "function") {
-        renderCalendar();
-    }
+    console.log("🔄 Refresh app");
 
     if (typeof loadEmployees === "function") {
         loadEmployees();
     }
+
+    if (typeof renderCalendar === "function") {
+        renderCalendar();
+    }
+
+    // 🔄 uppdatera user UI igen
+    const user = getCurrentUser?.();
+    if (user && typeof setText === "function") {
+        setText("currentUser", `👤 ${user.name}`);
+    }
 }
 
 /* ==========================================
-   🧪 DEV MODE HELPERS (nice)
+   🧪 DEV MODE (power tools)
 ========================================== */
 window.dev = {
     clearAllData: typeof clearAllData === "function" ? clearAllData : () => {},
     exportData: typeof exportData === "function" ? exportData : () => {},
     importData: typeof importData === "function" ? importData : () => {},
-    refreshApp
+    refreshApp,
+
+    // 🔥 extra dev helpers
+    loginAsAdmin: () => login?.("Admin", "admin"),
+    loginAsUser: () => login?.("User", "user")
 };
 
 /* ==========================================
-   📡 AUTO-RENDER VID STORAGE CHANGE (nice)
-   - uppdaterar om data ändras i annan flik
+   📡 STORAGE SYNC (multi-tab support)
 ========================================== */
 window.addEventListener("storage", (event) => {
     if (event.key === "vacations" || event.key === "employees") {
-        console.log("🔄 Data ändrad → uppdaterar UI");
+        console.log("🔄 Data ändrad i annan flik");
+
+        showToast?.("Data uppdaterad", "info");
 
         refreshApp();
+    }
+});
+
+/* ==========================================
+   ⌨️ GLOBAL SHORTCUTS (nice UX)
+========================================== */
+window.addEventListener("keydown", (e) => {
+    // 🔄 CTRL + R = refresh app (utan reload)
+    if (e.ctrlKey && e.key === "r") {
+        e.preventDefault();
+        refreshApp();
+        showToast?.("App uppdaterad", "info");
     }
 });
