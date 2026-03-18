@@ -28,9 +28,16 @@ window.renderCalendar = function () {
             return {
                 id: v.id,
                 title: emp?.name || "?",
+
                 start: v.start,
                 end: v.end,
-                backgroundColor: emp?.color || "#1677ff"
+
+                backgroundColor: emp?.color || "#1677ff",
+
+                // 🔥 NICE: tooltip
+                extendedProps: {
+                    employee: emp?.name || "Okänd"
+                }
             };
         });
 
@@ -49,8 +56,15 @@ window.renderCalendar = function () {
         {
             initialView: "dayGridMonth",
 
-            editable: true,     // drag & resize
-            selectable: true,   // 🔥 select (ny feature)
+            editable: true,
+            selectable: true,
+
+            // 🔥 NICE: flera views
+            headerToolbar: {
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek"
+            },
 
             events: events,
 
@@ -62,6 +76,8 @@ window.renderCalendar = function () {
                     start: info.event.startStr,
                     end: info.event.endStr
                 });
+
+                showToast?.("Flyttad", "info");
             },
 
             /* ----------------------------------
@@ -72,28 +88,49 @@ window.renderCalendar = function () {
                     start: info.event.startStr,
                     end: info.event.endStr
                 });
+
+                showToast?.("Uppdaterad längd", "info");
             },
 
             /* ----------------------------------
-               ❌ DELETE
+               ❌ CLICK
             ---------------------------------- */
             eventClick: function (info) {
                 if (!isAdmin()) {
-                    alert("Endast admin kan ta bort");
+                    showToast?.("Endast admin", "error");
                     return;
                 }
 
-                if (confirm("Ta bort?")) {
+                const action = confirmAction?.(
+                    "OK = Redigera\nAvbryt = Ta bort"
+                );
+
+                if (action) {
+                    openEditVacationModal(info.event);
+                } else {
+                    if (!confirmAction?.("Ta bort?")) return;
+
                     deleteVacationById(info.event.id);
                     renderCalendar();
+
+                    showToast?.("Borttagen", "info");
                 }
             },
 
             /* ----------------------------------
-               ✨ SELECT → CREATE VACATION
+               ✨ SELECT → CREATE
             ---------------------------------- */
             select: function (info) {
                 handleCreateFromSelection(info);
+            },
+
+            /* ----------------------------------
+               🔍 HOVER TOOLTIP (nice)
+            ---------------------------------- */
+            eventDidMount: function (info) {
+                const employee = info.event.extendedProps.employee;
+
+                info.el.title = `👤 ${employee}\n📅 ${info.event.startStr}`;
             }
         }
     );
@@ -108,13 +145,12 @@ function handleCreateFromSelection(info) {
     const employees = getEmployees();
 
     if (employees.length === 0) {
-        alert("Inga anställda finns");
+        showToast?.("Inga anställda finns", "error");
         return;
     }
 
     /* ------------------------------------------
        🧠 välj employee (enkel version)
-       - senare kan du byta till modal
     ------------------------------------------ */
     const employeeOptions = employees
         .map(e => `${e.id}: ${e.name}`)
@@ -137,8 +173,7 @@ function handleCreateFromSelection(info) {
 
     if (!created) return;
 
-    /* ------------------------------------------
-       🔄 uppdatera UI
-    ------------------------------------------ */
     renderCalendar();
+
+    showToast?.("Semester skapad", "success");
 }
