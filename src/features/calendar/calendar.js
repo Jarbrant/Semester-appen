@@ -3,26 +3,22 @@
    Ansvar:
    - Rendera kalendern
    - Mappa data → events
-   - Hantera UI-interaktion (drag, resize, delete)
+   - Hantera UI-interaktion (drag, resize, delete, select)
 ========================================== */
 
 let calendar; // håller referens till aktuell kalender-instans
 
 /* ==========================================
    🎯 PUBLIC: Render Calendar
-   - Hämtar data
-   - Bygger events
-   - Initierar FullCalendar
 ========================================== */
 window.renderCalendar = function () {
-    const employees = getEmployees();   // 🔹 alla anställda
-    const vacations = getVacations();   // 🔹 alla semestrar
+    const employees = getEmployees();
+    const vacations = getVacations();
 
-    // 🔹 valt filter (eller "all")
     const filter = document.getElementById("filter")?.value || "all";
 
     /* ------------------------------------------
-       🔄 Transformera vacations → calendar events
+       🔄 Transformera data → events
     ------------------------------------------ */
     const events = vacations
         .filter(v => filter === "all" || v.employee_id == filter)
@@ -31,7 +27,7 @@ window.renderCalendar = function () {
 
             return {
                 id: v.id,
-                title: emp?.name || "?",          // fallback om employee saknas
+                title: emp?.name || "?",
                 start: v.start,
                 end: v.end,
                 backgroundColor: emp?.color || "#1677ff"
@@ -39,42 +35,47 @@ window.renderCalendar = function () {
         });
 
     /* ------------------------------------------
-       ♻️ Rensa tidigare kalender (om finns)
+       ♻️ Rensa tidigare kalender
     ------------------------------------------ */
     if (calendar) {
         calendar.destroy();
     }
 
     /* ------------------------------------------
-       📅 Initiera FullCalendar
+       📅 Initiera kalender
     ------------------------------------------ */
     calendar = new FullCalendar.Calendar(
         document.getElementById("calendar"),
         {
             initialView: "dayGridMonth",
 
-            // 🔥 tillåter drag & resize
-            editable: true,
+            editable: true,     // drag & resize
+            selectable: true,   // 🔥 select (ny feature)
 
-            // 🔹 events som ska visas
             events: events,
 
             /* ----------------------------------
-               🖱️ EVENT: Drag & Drop
+               🖱️ DRAG & DROP
             ---------------------------------- */
             eventDrop: function (info) {
-                handleUpdateEvent(info.event);
+                updateVacationById(info.event.id, {
+                    start: info.event.startStr,
+                    end: info.event.endStr
+                });
             },
 
             /* ----------------------------------
-               📏 EVENT: Resize (ändra längd)
+               📏 RESIZE
             ---------------------------------- */
             eventResize: function (info) {
-                handleUpdateEvent(info.event);
+                updateVacationById(info.event.id, {
+                    start: info.event.startStr,
+                    end: info.event.endStr
+                });
             },
 
             /* ----------------------------------
-               ❌ EVENT: Klick → delete (admin)
+               ❌ DELETE
             ---------------------------------- */
             eventClick: function (info) {
                 if (!isAdmin()) {
@@ -83,8 +84,16 @@ window.renderCalendar = function () {
                 }
 
                 if (confirm("Ta bort?")) {
-                    handleDeleteEvent(info.event.id);
+                    deleteVacationById(info.event.id);
+                    renderCalendar();
                 }
+            },
+
+            /* ----------------------------------
+               ✨ SELECT → CREATE VACATION
+            ---------------------------------- */
+            select: function (info) {
+                handleCreateFromSelection(info);
             }
         }
     );
@@ -93,38 +102,43 @@ window.renderCalendar = function () {
 };
 
 /* ==========================================
-   🔄 UPDATE EVENT
-   - Uppdaterar semester efter drag/resize
+   ✨ CREATE FROM CALENDAR SELECT
 ========================================== */
-function handleUpdateEvent(event) {
-    const vacations = getVacations();
+function handleCreateFromSelection(info) {
+    const employees = getEmployees();
 
-    const updated = vacations.map(v => {
-        if (v.id == event.id) {
-            return {
-                ...v,
-                start: event.startStr,
-                end: event.endStr
-            };
-        }
-        return v;
+    if (employees.length === 0) {
+        alert("Inga anställda finns");
+        return;
+    }
+
+    /* ------------------------------------------
+       🧠 välj employee (enkel version)
+       - senare kan du byta till modal
+    ------------------------------------------ */
+    const employeeOptions = employees
+        .map(e => `${e.id}: ${e.name}`)
+        .join("\n");
+
+    const chosen = prompt(
+        "Ange employee ID:\n" + employeeOptions
+    );
+
+    if (!chosen) return;
+
+    /* ------------------------------------------
+       📅 skapa semester
+    ------------------------------------------ */
+    const created = createVacation({
+        employee_id: chosen,
+        start: info.startStr,
+        end: info.endStr
     });
 
-    saveVacations(updated);
-}
+    if (!created) return;
 
-/* ==========================================
-   ❌ DELETE EVENT
-   - Tar bort semester
-   - Re-renderar kalender
-========================================== */
-function handleDeleteEvent(id) {
-    const vacations = getVacations();
-
-    const filtered = vacations.filter(v => v.id != id);
-
-    saveVacations(filtered);
-
-    // 🔁 uppdatera UI efter delete
+    /* ------------------------------------------
+       🔄 uppdatera UI
+    ------------------------------------------ */
     renderCalendar();
 }
