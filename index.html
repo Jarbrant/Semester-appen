@@ -54,23 +54,48 @@
      📅 CREATE VACATION MODAL
 ========================================== -->
 <div id="vacationModal" class="modal">
-    <div class="modal-content">
-        <h3>Skapa semester</h3>
+  <div class="modal-content">
+    <h3>Skapa semester</h3>
 
-        <label>Anställd</label>
-        <select id="modalEmployee"></select>
+    <label>Anställd</label>
+    <select id="modalEmployee"></select>
 
-        <label>Start</label>
-        <input type="date" id="modalStart">
+    <label>Start</label>
+    <input type="date" id="modalStart">
 
-        <label>Slut</label>
-        <input type="date" id="modalEnd">
+    <label>Slut</label>
+    <input type="date" id="modalEnd">
 
-        <div style="margin-top:10px;">
-            <button onclick="submitVacationModal()">Spara</button>
-            <button onclick="closeModal()">Avbryt</button>
-        </div>
+    <div style="margin-top:10px;">
+      <button class="btn-primary" onclick="submitVacationModal()">Spara</button>
+      <button class="btn-secondary" onclick="closeModal()">Avbryt</button>
     </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     ✏️ EDIT VACATION MODAL
+========================================== -->
+<div id="editVacationModal" class="modal">
+  <div class="modal-content">
+    <h3>Redigera semester</h3>
+
+    <input type="hidden" id="editVacationId">
+
+    <label>Anställd</label>
+    <select id="editEmployee"></select>
+
+    <label>Start</label>
+    <input type="date" id="editStart">
+
+    <label>Slut</label>
+    <input type="date" id="editEnd">
+
+    <div style="margin-top:10px;">
+      <button class="btn-primary" onclick="submitEditVacation()">Spara</button>
+      <button class="btn-secondary" onclick="closeModal()">Avbryt</button>
+    </div>
+  </div>
 </div>
 
 <!-- ==========================================
