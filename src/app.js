@@ -15,10 +15,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
     try {
         // 🔹 säkerställ att storage är redo
-        initStorage();
+        if (typeof initStorage === "function") {
+            initStorage();
+        }
 
-        // 🔹 ladda grunddata
-        loadEmployees();
+        // 🔹 skapa demo-data om tomt (nice)
+        if (typeof seedEmployees === "function") {
+            seedEmployees();
+        }
+
+        // 🔹 ladda UI-data
+        if (typeof loadEmployees === "function") {
+            loadEmployees();
+        }
 
         // 🔹 säkerställ att user finns
         ensureUser();
@@ -36,15 +45,17 @@ window.addEventListener("DOMContentLoaded", () => {
    👤 AUTH HANDLING (nice to have)
 ========================================== */
 function ensureUser() {
+    if (typeof getCurrentUser !== "function") return null;
+
     let user = getCurrentUser();
 
     if (!user) {
         console.warn("⚠️ Ingen användare hittades → startar demo user");
 
-        // 🔹 demo fallback
-        login("Admin", "admin");
-
-        user = getCurrentUser();
+        if (typeof login === "function") {
+            login("Admin", "admin");
+            user = getCurrentUser();
+        }
     }
 
     console.log("👤 Aktiv användare:", user);
@@ -57,18 +68,22 @@ function ensureUser() {
    - Uppdaterar hela UI
 ========================================== */
 function refreshApp() {
-    renderCalendar();
+    if (typeof renderCalendar === "function") {
+        renderCalendar();
+    }
+
+    if (typeof loadEmployees === "function") {
+        loadEmployees();
+    }
 }
 
 /* ==========================================
    🧪 DEV MODE HELPERS (nice)
 ========================================== */
-
-// 🔹 gör vissa funktioner tillgängliga i console
 window.dev = {
-    clearAllData,
-    exportData,
-    importData,
+    clearAllData: typeof clearAllData === "function" ? clearAllData : () => {},
+    exportData: typeof exportData === "function" ? exportData : () => {},
+    importData: typeof importData === "function" ? importData : () => {},
     refreshApp
 };
 
@@ -79,6 +94,7 @@ window.dev = {
 window.addEventListener("storage", (event) => {
     if (event.key === "vacations" || event.key === "employees") {
         console.log("🔄 Data ändrad → uppdaterar UI");
-        renderCalendar();
+
+        refreshApp();
     }
 });
